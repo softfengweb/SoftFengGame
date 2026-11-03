@@ -148,6 +148,10 @@ services:
       - ./data/h5:/usr/share/nginx/html/h5:ro
     environment:
       TZ: Asia/Shanghai
+      # 管理端对外路径（默认 /admin，可在 .env 里改成 /mypanel 之类的自定义路径）
+      PEIWAN_ADMIN_PATH: ${PEIWAN_ADMIN_PATH:-/admin}
+      # 只让 envsubst 替换 PEIWAN_ 前缀的变量，避免把 nginx 自己的 $uri 等替换掉
+      NGINX_ENVSUBST_FILTER: PEIWAN_
     depends_on:
       server:
         condition: service_started

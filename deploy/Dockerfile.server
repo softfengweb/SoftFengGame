@@ -6,7 +6,10 @@
 FROM alpine:3.21
 
 # ffmpeg：视频消息封面抽帧（config.upload.ffmpeg 默认从 PATH 查找）
-RUN apk add --no-cache ca-certificates tzdata ffmpeg
+# apk 源换清华：ffmpeg 及依赖体积大，默认 dl-cdn.alpinelinux.org 在国内常要几分钟甚至超时
+RUN set -eux; \
+    sed -i 's|dl-cdn.alpinelinux.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apk/repositories; \
+    apk add --no-cache ca-certificates tzdata ffmpeg
 
 WORKDIR /app
 

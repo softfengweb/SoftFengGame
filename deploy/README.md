@@ -13,6 +13,7 @@
                     ┌──────────────────────────────┐
   浏览器 / 小程序 ──▶│  nginx (容器 web, 80)         │
                     │   /admin/  → 管理端静态资源   │
+                    │   （路径可配，见 PEIWAN_ADMIN_PATH）
                     │   /        → H5 静态资源      │
                     │   /api/    → server:8088     │
                     │   /uploads/→ server:8088     │
@@ -37,7 +38,7 @@
 | `docker-compose.yml` | 四个服务：mysql、redis、server、web(nginx) |
 | `Dockerfile.server` | 复制预编译二进制 + 配置，安装 ffmpeg / tzdata |
 | `Dockerfile.admin` | 复制 `admin/dist` 到 nginx |
-| `nginx.conf` | 反代 `/api`、`/uploads`、`/payment`、`/health`，静态 `/admin/` 与 H5 |
+| `nginx.conf` | 反代 `/api`、`/uploads`、`/payment`、`/health`，静态 `${PEIWAN_ADMIN_PATH}/` 与 H5（envsubst 模板） |
 | `.env.example` | 环境变量样例（安装脚本会生成 `.env`） |
 | `init.sql` | 单文件初始化 SQL（备用，见第四节） |
 | `data/uploads` | 上传文件（挂载，需备份） |
@@ -68,6 +69,7 @@ bash install.sh
 ```bash
 PEIWAN_PUBLIC_URL=https://pw.example.com \
 PEIWAN_HTTP_PORT=80 \
+PEIWAN_ADMIN_PATH=/mypanel \
 PEIWAN_ZK_BASE_URL=https://zk.softfeng.cn \
 bash install.sh --yes
 ```
@@ -78,6 +80,7 @@ bash install.sh --yes
 | --- | --- | --- |
 | `PEIWAN_PUBLIC_URL` | 是 | 站点/API 域名，支付回调与授权上报都用它 |
 | `PEIWAN_HTTP_PORT` | 否 | 宿主机端口，默认 80 |
+| `PEIWAN_ADMIN_PATH` | 否 | 管理后台路径，默认 `/admin`；单层，字母数字下划线短横线 |
 | `PEIWAN_H5_URL` | 否 | H5 与后端不同域时填写 |
 | `PEIWAN_CORS_ORIGINS` | 否 | H5 直连后端时的跨域白名单，逗号分隔 |
 | `PEIWAN_DB_ROOT_PASSWORD` | 是 | MySQL root 密码（仅容器内使用） |
@@ -164,7 +167,9 @@ tar xzf peiwan-files-2026-11-03.tar.gz
 | --- | --- |
 | `服务端健康检查未通过` | `docker compose -f deploy/docker-compose.yml logs --tail=200 server` |
 | 服务端反复重启 | 多半是数据库密码不一致（改过 `.env` 但 MySQL 卷里还是旧密码）或 JWT 密钥为空 |
-| 后台打开 404 | 确认访问 `/admin/`（带斜杠）；检查 `web` 容器是否启动 |
+| 后台打开 404 | 确认访问的是 `.env` 里 `PEIWAN_ADMIN_PATH` 对应的路径（如 `/mypanel/`）；不带斜杠会自动 301 |
+| 后台白屏、资源 404 | `admin/dist` 必须是相对 base 构建的（`index.html` 里是 `./assets/...`），用旧版 `/admin/` 绝对路径产物换路径必白屏 |
+| 改了后台路径不生效 | nginx 配置在容器启动时渲染，改完 `.env` 要 `docker compose up -d web` 重建容器 |
 | 接口 502 | `server` 未就绪，看 `docker compose ps` 与 server 日志 |
 | 授权一直「未激活」 | 检查 `PEIWAN_ZK_BASE_URL` 是否可达、授权码是否有效、服务器时间是否准确 |
 | 上传后图片 404 | 确认 `data/uploads` 挂载存在且权限可写（容器内以 root 运行） |

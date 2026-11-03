@@ -170,6 +170,25 @@ case "$PUBLIC_URL" in
 esac
 PUBLIC_URL="${PUBLIC_URL%/}"
 
+# 管理端后台路径：对外暴露的登录地址，默认 /admin（扫描器最常探测的路径）
+ADMIN_PATH="${PEIWAN_ADMIN_PATH:-}"
+if [ -z "$ADMIN_PATH" ] && [ "$ASSUME_YES" != "1" ]; then
+	echo "管理端路径只影响访问地址，不影响接口权限；改掉默认的 /admin 可以减少扫描干扰。"
+	ask "管理端后台路径" "/admin" ADMIN_PATH
+fi
+ADMIN_PATH="${ADMIN_PATH:-/admin}"
+ADMIN_PATH="${ADMIN_PATH%/}"
+case "$ADMIN_PATH" in
+	''|/) die "管理端路径不能为空或根路径" ;;
+	/*) ;;
+	*) ADMIN_PATH="/$ADMIN_PATH" ;;
+esac
+ADMIN_SLUG="${ADMIN_PATH#/}"
+case "$ADMIN_SLUG" in
+	*[!A-Za-z0-9_-]*) die "管理端路径只能包含字母、数字、下划线、短横线（单层，如 /mypanel）：$ADMIN_PATH" ;;
+esac
+[ "${#ADMIN_SLUG}" -ge 3 ] || die "管理端路径至少 3 个字符：$ADMIN_PATH"
+
 ZK_BASE_URL="${PEIWAN_ZK_BASE_URL:-}"
 if [ -z "$ZK_BASE_URL" ] && [ "$ASSUME_YES" != "1" ]; then
 	ask "授权中控地址（必填：授权在此激活，改了也关不掉校验）" "https://zk.softfeng.cn" ZK_BASE_URL
@@ -240,7 +259,7 @@ if [ "$ASSUME_YES" != "1" ]; then
 	echo
 	echo "---------- 即将安装 ----------"
 	echo "站点地址   : $PUBLIC_URL"
-	echo "管理端     : $PUBLIC_URL/admin/"
+	echo "管理端     : $PUBLIC_URL$ADMIN_PATH/"
 	echo "HTTP 端口  : $HTTP_PORT"
 	echo "版本       : $VERSION"
 	echo "授权中控   : $ZK_BASE_URL（授权校验强制开启）"
@@ -266,6 +285,9 @@ PEIWAN_CORS_ORIGINS=${PEIWAN_CORS_ORIGINS:-}
 PEIWAN_HTTP_PORT=$HTTP_PORT
 PEIWAN_VERSION=$VERSION
 
+# 管理端对外路径（nginx 启动时渲染进配置，改完 docker compose up -d 生效）
+PEIWAN_ADMIN_PATH=$ADMIN_PATH
+
 PEIWAN_DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
 PEIWAN_DB_NAME=$DB_NAME
 PEIWAN_DB_USER=$DB_USER
@@ -290,7 +312,7 @@ log "已生成 $ENV_FILE"
 # ---------- 目录 ----------
 mkdir -p "$DATA_DIR/uploads" "$DATA_DIR/logs" "$H5_DIR"
 if [ -z "$(ls -A "$H5_DIR" 2>/dev/null)" ]; then
-	cat > "$H5_DIR/index.html" <<'HTML'
+	cat > "$H5_DIR/index.html" <<HTML
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><title>软风游戏陪玩系统</title>
@@ -300,7 +322,7 @@ if [ -z "$(ls -A "$H5_DIR" 2>/dev/null)" ]; then
 h1{font-size:22px;margin:0 0 12px}p{color:#86909c;font-size:14px;margin:6px 0}a{color:#165dff;text-decoration:none}</style>
 </head>
 <body><div class="card"><h1>软风游戏陪玩系统</h1>
-<p>后端已启动，管理端入口：<a href="/admin/">/admin/</a></p>
+<p>后端已启动，管理端入口：<a href="$ADMIN_PATH/">$ADMIN_PATH/</a></p>
 <p>H5 产物请放到 deploy/data/h5 后刷新本页</p></div></body></html>
 HTML
 	log "已写入 H5 占位页（正式 H5 请把授权方提供的产物拷到 $H5_DIR）"
@@ -324,7 +346,7 @@ cat <<EOF
 安装完成（版本 $VERSION）
 
   用户端 H5 : $PUBLIC_URL/
-  管理端    : $PUBLIC_URL/admin/
+  管理端    : $PUBLIC_URL$ADMIN_PATH/
   管理员    : $ADMIN_USER / $ADMIN_PASS   ← 登录后可在后台修改
   上传目录  : $DATA_DIR/uploads
   日志      : $DATA_DIR/logs

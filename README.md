@@ -18,7 +18,7 @@
 | `server/bin/linux-amd64/server` | 服务端可执行程序（x86_64，静态编译，无需安装 Go） |
 | `server/bin/linux-arm64/server` | 服务端可执行程序（ARM64，适配鲲鹏 / 倚天 / Apple 容器等） |
 | `server/config/config.yaml` | 服务端配置模板（数据库、Redis、JWT、上传、授权等） |
-| `admin/dist/` | 已构建完成的管理后台静态资源（访问路径 `/admin/`） |
+| `admin/dist/` | 已构建完成的管理后台静态资源（访问路径由 `PEIWAN_ADMIN_PATH` 决定，默认 `/admin/`） |
 | `deploy/install.sh` | 一键安装 / 升级脚本（Docker Compose） |
 | `deploy/docker-compose.yml` | MySQL + Redis + 服务端 + Nginx 编排 |
 | `deploy/Dockerfile.server` | 服务端镜像（直接使用预编译二进制） |
@@ -55,7 +55,7 @@ bash install.sh
 脚本会依次完成：
 
 1. 检查 docker / compose；
-2. 交互式询问站点地址、授权中控地址、授权码（可留空）、HTTP 端口；
+2. 交互式询问站点地址、管理端后台路径（默认 `/admin`）、授权中控地址、授权码（可留空）、HTTP 端口；
 3. 自动生成数据库、Redis、JWT 的随机密码，写入 `deploy/.env`（权限 600）；
 4. 创建 `deploy/data/{uploads,logs,h5}`；
 5. 构建镜像并启动 MySQL、Redis、服务端、Nginx；
@@ -64,7 +64,8 @@ bash install.sh
 安装完成后：
 
 - 用户端 H5：`http(s)://你的域名/`（未放 H5 产物时显示占位页）
-- 管理后台：`http(s)://你的域名/admin/`
+- 管理后台：`http(s)://你的域名` + 安装时设置的后台路径（默认 `/admin/`）
+  改路径只需编辑 `deploy/.env` 的 `PEIWAN_ADMIN_PATH` 后 `docker compose up -d`，不用重新打包
 - 管理员：安装时填写的用户名与密码（密码留空则自动生成并打印；留空账号则保留 `admin / admin123`）
 
 非交互安装（适合批量交付）：
@@ -169,9 +170,10 @@ curl http://127.0.0.1:8088/health
 
 ### 5. 前置 Nginx
 
-`deploy/nginx.conf` 可直接复用：`/admin/` 指到管理端 dist，`/api/` 与 `/uploads/` 反代到
-`127.0.0.1:8088`（含 WebSocket 升级与长连接超时）。记得把 `proxy_pass` 的 `server:8088`
-改成 `127.0.0.1:8088`，并把 HTTPS 证书配好。
+`deploy/nginx.conf` 是 nginx 官方镜像的 envsubst 模板：`${PEIWAN_ADMIN_PATH}/` 指到管理端 dist
+（默认 `/admin`，非 Docker 手工部署时把 `${PEIWAN_ADMIN_PATH}` 直接写成实际路径即可），
+`/api/` 与 `/uploads/` 反代到 `127.0.0.1:8088`（含 WebSocket 升级与长连接超时）。
+记得把 `proxy_pass` 的 `server:8088` 改成 `127.0.0.1:8088`，并把 HTTPS 证书配好。
 
 ---
 

@@ -1,0 +1,16 @@
+# Docker 构建上下文只需要发布物（server/bin 二进制、admin/dist 静态资源、deploy 脚本）
+# 其余内容排除，避免上下文动辄上百 MB、也避免把运行时数据带进镜像
+
+.git
+.gitignore
+.gitattributes
+
+# 运行时生成，不属于发布内容
+deploy/data
+deploy/.env
+deploy/.env.bak
+deploy/config.yaml
+
+**/*.log
+**/.DS_Store
+**/Thumbs.db

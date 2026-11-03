@@ -3,7 +3,9 @@
 # nginx 同时承担：/admin/ 静态资源、/api/ 与 /uploads/ 反向代理、H5 静态目录
 FROM nginx:1.27-alpine
 
-COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+# 放进官方镜像的模板目录：容器启动时由 envsubst 渲染成 /etc/nginx/conf.d/default.conf，
+# 管理端路径由 PEIWAN_ADMIN_PATH 决定（dist 是相对 base 构建的，换路径不用重新打包）
+COPY deploy/nginx.conf /etc/nginx/templates/default.conf.template
 COPY admin/dist /usr/share/nginx/html/admin
 
 # H5 产物由宿主机挂载到 /usr/share/nginx/html/h5（授权方单独提供）
