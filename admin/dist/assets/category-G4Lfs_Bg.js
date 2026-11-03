@@ -1,0 +1,1 @@
+import{b5 as a}from"./index-DIFvGjUV.js";function r(r){return a.get({url:"/api/v1/admin/categories",params:r})}function t(r){return a.post({url:"/api/v1/admin/categories",data:r})}function i(r,t){return a.put({url:`/api/v1/admin/categories/${r}`,data:t})}function n(r){return a.del({url:`/api/v1/admin/categories/${r}`})}export{i as a,n as b,t as c,r as f};

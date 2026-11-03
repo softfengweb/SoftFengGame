@@ -18,7 +18,8 @@
 #     激活时服务端会把它上报给中控，作为该实例的域名记录；换域名改 .env 重启即可。
 #   - 授权码：可选。装了机器但还没拿到授权码时不卡安装，装完登录后台
 #     「系统设置 → 授权中心」填写即可；安装时填了则启动约 20 秒后自动激活。
-#   - 未配置中控地址时自动把授权开关关掉，避免服务端反复向空地址发心跳。
+#   - 授权校验强制开启，没有关闭开关：未激活时只放行后台登录、授权中心与
+#     支付/提现回调，其余接口一律拒绝；激活后立即恢复，不需要重启。
 # ============================================================================
 set -euo pipefail
 
@@ -171,27 +172,21 @@ PUBLIC_URL="${PUBLIC_URL%/}"
 
 ZK_BASE_URL="${PEIWAN_ZK_BASE_URL:-}"
 if [ -z "$ZK_BASE_URL" ] && [ "$ASSUME_YES" != "1" ]; then
-	ask "授权中控地址（回车跳过 = 不接入授权，业务照常可用）" "https://zk.softfeng.cn" ZK_BASE_URL
+	ask "授权中控地址（必填：授权在此激活，改了也关不掉校验）" "https://zk.softfeng.cn" ZK_BASE_URL
 	if [ "$ZK_BASE_URL" = "https://zk.softfeng.cn" ]; then
 		warn "使用官方中控地址，正式交付请确认该域名可访问"
 	fi
 fi
 ZK_BASE_URL="${ZK_BASE_URL%/}"
+# 授权校验强制开启且无法关闭：没有中控地址就激活不了，装完只会得到一个被限制的站点
+[ -n "$ZK_BASE_URL" ] || die "授权中控地址不能为空（可先用 https://zk.softfeng.cn 占位，装完在 .env 里改）"
 
 LICENSE_KEY="${PEIWAN_ZK_LICENSE_KEY:-}"
 if [ -z "$LICENSE_KEY" ] && [ "$ASSUME_YES" != "1" ]; then
-	echo "授权码可以现在填，也可以装完登录后台「系统设置 → 授权中心」再填。"
+	echo "授权码可以现在填，也可以装完登录后台「系统设置 → 授权中心」再填（未激活时只能进后台与授权中心）。"
 	ask "授权码（可留空）" "" LICENSE_KEY
 fi
 LICENSE_KEY="$(printf '%s' "$LICENSE_KEY" | tr '[:lower:]' '[:upper:]')"
-
-# 没有中控地址就不要打开授权开关：否则服务端会一直向默认地址发心跳失败
-if [ -n "$ZK_BASE_URL" ]; then
-	ZK_ENABLED="$(pick PEIWAN_ZK_ENABLED true)"
-else
-	ZK_ENABLED=0
-	warn "未配置授权中控地址，已关闭授权校验（后台显示「未接入」，业务不受影响）"
-fi
 
 HTTP_PORT="${PEIWAN_HTTP_PORT:-}"
 if [ -z "$HTTP_PORT" ]; then
@@ -223,7 +218,7 @@ if [ "$ASSUME_YES" != "1" ]; then
 	echo "管理端     : $PUBLIC_URL/admin/"
 	echo "HTTP 端口  : $HTTP_PORT"
 	echo "版本       : $VERSION"
-	echo "授权中控   : ${ZK_BASE_URL:-（不接入）}"
+	echo "授权中控   : $ZK_BASE_URL（授权校验强制开启）"
 	echo "授权码     : ${LICENSE_KEY:-（留空，装完后在后台填写）}"
 	echo "数据库     : $DB_NAME / $DB_USER（密码自动生成）"
 	echo "------------------------------"
@@ -255,7 +250,6 @@ PEIWAN_REDIS_PASSWORD=$REDIS_PASSWORD
 PEIWAN_JWT_SECRET=$JWT_SECRET
 PEIWAN_JWT_ADMIN_SECRET=$JWT_ADMIN_SECRET
 
-PEIWAN_ZK_ENABLED=$ZK_ENABLED
 PEIWAN_ZK_BASE_URL=$ZK_BASE_URL
 PEIWAN_ZK_LICENSE_KEY=$LICENSE_KEY
 PEIWAN_ZK_PRODUCT=${PEIWAN_ZK_PRODUCT:-peiwan}
@@ -305,10 +299,10 @@ cat <<EOF
   上传目录  : $DATA_DIR/uploads
   日志      : $DATA_DIR/logs
 
-授权状态（三种都支持，按需选一种）：
+授权（强制校验，关不掉）：
   1) 已在安装时填写授权码：容器启动约 20 秒后自动激活，
      登录后台「系统设置 → 授权中心」确认状态为「正版授权」。
-  2) 未填授权码：同样登录该页面填写授权码激活。
+  2) 未填授权码：此时站点只能登录后台与授权中心，填好授权码激活后自动恢复。
   3) 授权域名不用单独填：中控记录的就是上面的站点地址，
      换域名后改 $ENV_FILE 里的 PEIWAN_PUBLIC_URL 再
      docker compose -f $COMPOSE_FILE up -d 即可。

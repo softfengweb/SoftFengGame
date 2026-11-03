@@ -51,7 +51,7 @@ cd deploy
 bash install.sh
 ```
 
-会依次询问：站点访问地址（必填）、授权中控地址（可跳过）、授权码（可留空）、HTTP 端口。
+会依次询问：站点访问地址（必填）、授权中控地址（必填）、授权码（可留空）、HTTP 端口。
 数据库/Redis/JWT 密码全部随机生成写入 `.env`（`chmod 600`），不需要手填。
 
 批量交付用非交互模式：
@@ -75,8 +75,7 @@ bash install.sh --yes
 | `PEIWAN_DB_NAME` / `PEIWAN_DB_USER` / `PEIWAN_DB_PASSWORD` | 是 | 业务库与账号 |
 | `PEIWAN_REDIS_PASSWORD` | 是 | Redis 密码 |
 | `PEIWAN_JWT_SECRET` / `PEIWAN_JWT_ADMIN_SECRET` | 是 | 用户端与管理端 JWT 密钥，建议 `openssl rand -hex 32` |
-| `PEIWAN_ZK_ENABLED` | 否 | 是否启用授权校验；未配置中控地址时脚本会自动写 0 |
-| `PEIWAN_ZK_BASE_URL` | 否 | 授权中控地址 |
+| `PEIWAN_ZK_BASE_URL` | 是 | 授权中控地址（激活与心跳必需） |
 | `PEIWAN_ZK_LICENSE_KEY` | 否 | 授权码，可装完在后台填写 |
 | `PEIWAN_VERSION` | 否 | 版本号，写入二进制展示，默认取仓库根目录 `VERSION` |
 
@@ -117,6 +116,19 @@ bash deploy/install.sh --upgrade
    支付回调继续处理，不影响收款；
 6. 容器化部署不支持后台「立即更新」，升级一律通过替换镜像完成（脚本已设置
    `PEIWAN_ZK_DISABLE_UPDATE=1`）。
+
+### 授权是强制的，没有关闭开关
+
+配置里没有 `zk.enabled` 之类的开关，改 `.env` 或改配置文件都关不掉校验（只有未注入版本号的
+开发构建会跳过）。未授权时的限制规则：
+
+| 状态 | 用户端 | 管理端 |
+| --- | --- | --- |
+| 未激活 / 授权无效 | 全站接口拒绝（除支付、提现回调） | 只放行登录与「授权中心」，其余拒绝 |
+| 已过期（宽限期结束） | 拒绝「新下单 / 支付 / 充值 / 提现 / 送礼 / 缴保证金」，已有订单的取消、确认、退款、接单照常 | 全部放行（便于处理存量业务） |
+| 正常 / 宽限期内 | 全部放行 | 全部放行 |
+
+也就是说：不激活等于装了一个只能登录后台的壳子；填好授权码激活后立即恢复，不需要重启。
 
 ## 七、备份与恢复
 
