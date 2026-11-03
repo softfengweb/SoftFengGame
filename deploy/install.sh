@@ -188,6 +188,31 @@ if [ -z "$LICENSE_KEY" ] && [ "$ASSUME_YES" != "1" ]; then
 fi
 LICENSE_KEY="$(printf '%s' "$LICENSE_KEY" | tr '[:lower:]' '[:upper:]')"
 
+ADMIN_USER="${PEIWAN_INIT_ADMIN_USERNAME:-}"
+if [ -z "$ADMIN_USER" ]; then
+	ask "管理员用户名" "admin" ADMIN_USER
+fi
+case "$ADMIN_USER" in
+	''|*[!A-Za-z0-9_.-]*) die "管理员用户名只能包含字母、数字、下划线、短横线与点：$ADMIN_USER" ;;
+esac
+
+ADMIN_PASS="${PEIWAN_INIT_ADMIN_PASSWORD:-}"
+ADMIN_PASS_GENERATED=0
+if [ -z "$ADMIN_PASS" ] && [ "$ASSUME_YES" != "1" ]; then
+	echo "管理员密码至少 8 位；直接回车则自动生成随机密码。"
+	read -r -s -p "管理员密码: " p1; echo
+	if [ -n "$p1" ]; then
+		read -r -s -p "再输入一次: " p2; echo
+		[ "$p1" = "$p2" ] || die "两次输入不一致"
+		ADMIN_PASS="$p1"
+	fi
+fi
+if [ -z "$ADMIN_PASS" ]; then
+	ADMIN_PASS="$(rand_hex 8)"
+	ADMIN_PASS_GENERATED=1
+fi
+[ "${#ADMIN_PASS}" -ge 8 ] || die "管理员密码至少 8 位"
+
 HTTP_PORT="${PEIWAN_HTTP_PORT:-}"
 if [ -z "$HTTP_PORT" ]; then
 	ask "宿主机 HTTP 端口" "80" HTTP_PORT
@@ -220,6 +245,7 @@ if [ "$ASSUME_YES" != "1" ]; then
 	echo "版本       : $VERSION"
 	echo "授权中控   : $ZK_BASE_URL（授权校验强制开启）"
 	echo "授权码     : ${LICENSE_KEY:-（留空，装完后在后台填写）}"
+	echo "管理员     : $ADMIN_USER"
 	echo "数据库     : $DB_NAME / $DB_USER（密码自动生成）"
 	echo "------------------------------"
 	read -r -p "确认开始？[Y/n] " ok
@@ -249,6 +275,10 @@ PEIWAN_REDIS_PASSWORD=$REDIS_PASSWORD
 
 PEIWAN_JWT_SECRET=$JWT_SECRET
 PEIWAN_JWT_ADMIN_SECRET=$JWT_ADMIN_SECRET
+
+# 只在数据库还是出厂默认密码时生效；客户改过密码后这两行不再起作用
+PEIWAN_INIT_ADMIN_USERNAME=$ADMIN_USER
+PEIWAN_INIT_ADMIN_PASSWORD=$ADMIN_PASS
 
 PEIWAN_ZK_BASE_URL=$ZK_BASE_URL
 PEIWAN_ZK_LICENSE_KEY=$LICENSE_KEY
@@ -295,7 +325,7 @@ cat <<EOF
 
   用户端 H5 : $PUBLIC_URL/
   管理端    : $PUBLIC_URL/admin/
-  默认管理员: admin / admin123   ← 首次登录后立即修改密码
+  管理员    : $ADMIN_USER / $ADMIN_PASS   ← 登录后可在后台修改
   上传目录  : $DATA_DIR/uploads
   日志      : $DATA_DIR/logs
 
