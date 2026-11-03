@@ -1,0 +1,166 @@
+# 软风游戏陪玩系统 · 单机 Docker 部署
+#
+# 推荐直接跑安装脚本（会生成 .env 再调用本文件）：
+#   cd deploy && bash install.sh
+#
+# 手动部署：
+#   cp deploy/.env.example deploy/.env      # 按需修改
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+#
+# 目录约定（相对本文件所在目录）：
+#   deploy/.env            环境变量（含密码与授权配置，权限 600，不入版本库）
+#   deploy/data/uploads    上传文件持久化
+#   deploy/data/logs       服务端日志
+#   deploy/data/h5         H5 产物（授权方提供，可缺省）
+name: peiwan
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: peiwan-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${PEIWAN_DB_ROOT_PASSWORD:?缺少 PEIWAN_DB_ROOT_PASSWORD，请检查 deploy/.env}
+      MYSQL_DATABASE: ${PEIWAN_DB_NAME:-peiwan_db}
+      MYSQL_USER: ${PEIWAN_DB_USER:-peiwan_db}
+      MYSQL_PASSWORD: ${PEIWAN_DB_PASSWORD:?缺少 PEIWAN_DB_PASSWORD，请检查 deploy/.env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    # 不映射端口：只允许同 compose 网络内的服务访问
+    networks:
+      - peiwan
+
+  redis:
+    image: redis:7-alpine
+    container_name: peiwan-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${PEIWAN_REDIS_PASSWORD:?缺少 PEIWAN_REDIS_PASSWORD，请检查 deploy/.env}
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${PEIWAN_REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - peiwan
+
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.server
+      args:
+        VERSION: ${PEIWAN_VERSION:-1.0.0}
+    image: peiwan/server:${PEIWAN_VERSION:-1.0.0}
+    container_name: peiwan-server
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      # 生产必须 release：debug 下短信未接入时验证码会回传给客户端
+      PEIWAN_SERVER_MODE: release
+      PEIWAN_SERVER_PORT: "8088"
+      # 对外访问地址：支付回调、H5 回跳、授权上报的域名都用它
+      PEIWAN_PUBLIC_URL: ${PEIWAN_PUBLIC_URL:?缺少 PEIWAN_PUBLIC_URL，请检查 deploy/.env}
+      PEIWAN_H5_URL: ${PEIWAN_H5_URL:-}
+      PEIWAN_CORS_ORIGINS: ${PEIWAN_CORS_ORIGINS:-}
+      PEIWAN_DB_HOST: mysql
+      PEIWAN_DB_PORT: "3306"
+      PEIWAN_DB_USER: ${PEIWAN_DB_USER:-peiwan_db}
+      PEIWAN_DB_PASSWORD: ${PEIWAN_DB_PASSWORD:?缺少 PEIWAN_DB_PASSWORD}
+      PEIWAN_DB_NAME: ${PEIWAN_DB_NAME:-peiwan_db}
+      PEIWAN_REDIS_HOST: redis
+      PEIWAN_REDIS_PORT: "6379"
+      PEIWAN_REDIS_PASSWORD: ${PEIWAN_REDIS_PASSWORD}
+      PEIWAN_JWT_SECRET: ${PEIWAN_JWT_SECRET:?缺少 PEIWAN_JWT_SECRET}
+      PEIWAN_JWT_ADMIN_SECRET: ${PEIWAN_JWT_ADMIN_SECRET:?缺少 PEIWAN_JWT_ADMIN_SECRET}
+      # 授权中控
+      PEIWAN_ZK_ENABLED: ${PEIWAN_ZK_ENABLED:-true}
+      PEIWAN_ZK_BASE_URL: ${PEIWAN_ZK_BASE_URL:-}
+      PEIWAN_ZK_LICENSE_KEY: ${PEIWAN_ZK_LICENSE_KEY:-}
+      PEIWAN_ZK_PRODUCT: ${PEIWAN_ZK_PRODUCT:-peiwan}
+      # 容器里不执行后台在线更新，统一更新镜像
+      PEIWAN_ZK_DISABLE_UPDATE: "1"
+    volumes:
+      - ./data/uploads:/app/uploads
+      - ./data/logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8088/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - peiwan
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.admin
+    image: peiwan/web:${PEIWAN_VERSION:-1.0.0}
+    container_name: peiwan-web
+    restart: unless-stopped
+    ports:
+      # 宿主机端口：默认 80，被占用时在 .env 里改 PEIWAN_HTTP_PORT
+      - "${PEIWAN_HTTP_PORT:-80}:80"
+    volumes:
+      # H5 产物：把授权方提供的 h5 包内容拷到 deploy/data/h5
+      - ./data/h5:/usr/share/nginx/html/h5:ro
+    environment:
+      TZ: Asia/Shanghai
+    depends_on:
+      server:
+        condition: service_started
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - peiwan
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  peiwan:
+    driver: bridge

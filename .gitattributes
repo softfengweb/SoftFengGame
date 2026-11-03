@@ -1,0 +1,9 @@
+# 二进制文件不做换行转换与文本 diff，避免 Windows 下 clone 破坏可执行文件
+* text=auto eol=lf
+server/bin/** binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+deploy/install.sh text eol=lf

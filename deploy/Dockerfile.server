@@ -1,0 +1,24 @@
+# 服务端镜像：直接使用仓库里已编译好的二进制，不在镜像内编译（发布仓库不含源码）
+#
+# TARGETARCH 由 BuildKit 自动注入（amd64 / arm64），与本仓库目录结构对应：
+#   server/bin/linux-amd64/server
+#   server/bin/linux-arm64/server
+FROM alpine:3.21
+
+# ffmpeg：视频消息封面抽帧（config.upload.ffmpeg 默认从 PATH 查找）
+RUN apk add --no-cache ca-certificates tzdata ffmpeg
+
+WORKDIR /app
+
+ARG TARGETARCH=amd64
+COPY server/bin/linux-${TARGETARCH}/server /app/server
+COPY server/config/config.yaml /app/config/config.yaml
+
+RUN chmod +x /app/server && mkdir -p /app/uploads /app/logs
+
+ENV TZ=Asia/Shanghai
+EXPOSE 8088
+
+# -migrate：首次启动自动建表与写入种子数据，之后按 schema_migrations 跳过
+ENTRYPOINT ["/app/server"]
+CMD ["-config", "/app/config/config.yaml", "-migrate"]

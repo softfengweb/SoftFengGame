@@ -1,0 +1,94 @@
+# ============================================================================
+# 软风游戏陪玩系统 · 服务端配置
+#
+# 优先级：环境变量 > 本文件。Docker 部署时密码等敏感项由 deploy/.env 注入，
+# 本文件里留空即可；非 Docker 部署请直接填写下面的值。
+#
+# 常用环境变量：
+#   PEIWAN_SERVER_PORT / PEIWAN_SERVER_MODE / PEIWAN_PUBLIC_URL / PEIWAN_H5_URL
+#   PEIWAN_CORS_ORIGINS / PEIWAN_DB_HOST / PEIWAN_DB_PORT / PEIWAN_DB_USER
+#   PEIWAN_DB_PASSWORD / PEIWAN_DB_NAME / PEIWAN_REDIS_HOST / PEIWAN_REDIS_PORT
+#   PEIWAN_REDIS_PASSWORD / PEIWAN_JWT_SECRET / PEIWAN_JWT_ADMIN_SECRET
+#   PEIWAN_ZK_ENABLED / PEIWAN_ZK_BASE_URL / PEIWAN_ZK_LICENSE_KEY
+# ============================================================================
+
+server:
+  port: 8088
+  # 生产必须是 release：debug 模式下错误信息更详细，且短信未接入时验证码会回传
+  mode: release
+  # 对外访问地址：支付回调、H5 支付回跳、授权激活上报都用它，必须公网可访问
+  public_url: "https://pw.example.com"
+  # H5 站点地址（可选兜底）。后台「系统配置 → 站点设置 → H5 前端地址」优先
+  h5_url: ""
+  # 跨域白名单：H5 与后端同域反代时留空；H5 直连后端才填，如 ["https://h5.example.com"]
+  cors_origins: []
+
+database:
+  host: 127.0.0.1
+  port: 3306
+  user: peiwan_db
+  password: ""
+  dbname: peiwan_db
+  charset: utf8mb4
+  max_idle_conns: 10
+  max_open_conns: 100
+  # 慢查询阈值（毫秒），超过会打日志
+  slow_threshold: 200
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  # 生产环境必须用环境变量覆盖，至少 32 位随机串：openssl rand -hex 32
+  secret: ""
+  admin_secret: ""
+  expire_hours: 168
+
+biz:
+  # 未支付订单自动取消（分钟）
+  order_auto_cancel_minutes: 15
+  # 服务完成后的自动确认（小时）
+  order_auto_confirm_hours: 24
+  # 单个陪玩每日接单上限
+  escort_daily_order_limit: 20
+  escort_review_enabled: false
+
+# 本地上传目录（相对路径按进程工作目录解析），静态访问前缀 /uploads
+upload:
+  dir: uploads
+  url_prefix: /uploads
+  # 视频封面抽帧用的 ffmpeg，默认从 PATH 查找；容器镜像已内置
+  ffmpeg: ffmpeg
+
+# 长连接容量（单实例）：超限握手直接 429，保护进程内存与文件句柄
+realtime:
+  max_connections: 20000
+  max_per_user: 5
+  # 单 IP 默认不限制：移动网络大量用户共用运营商 NAT 出口，开启会误伤
+  max_per_ip: 0
+
+# 授权中控（管理后台「系统设置 → 授权中心」展示与操作都读这里）
+# 留空也能正常启动，只是显示「未接入」；正式经营请配置授权并激活。
+zk:
+  # Docker 部署由 .env 的 PEIWAN_ZK_ENABLED 覆盖为 true
+  enabled: false
+  # 授权中控地址，如 https://zk.softfeng.cn
+  base_url: ""
+  # 授权码可在此预置（首次启动自动激活），也可装完在后台填写
+  license_key: ""
+  # 实例标识留空则首次自动生成并落库；迁移服务器时需连同 zk_license 表一起迁移
+  install_id: ""
+  # 中控 Ed25519 公钥已编译进二进制，通常无需配置
+  public_key: ""
+  public_key_file: ""
+  # 允许用配置覆盖内置公钥会带来绕过授权的风险，保持 false
+  allow_key_override: false
+  product: "peiwan"
+  heartbeat_hours: 6
+  allow_dev_update: false
+  skip_release_signature_check: false
+  # 容器化部署不支持后台在线更新，统一通过更新镜像完成
+  disable_online_update: true
