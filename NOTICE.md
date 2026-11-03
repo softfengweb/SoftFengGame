@@ -8,8 +8,7 @@
 | 英文名称 | SoftFeng Game Companion System |
 | 著作权人 | 陇南市软风科技有限公司（Longnan SoftFeng Technology Co., Ltd.） |
 | 商标 | 软风 / SoftFeng |
-| 官方网站 | https://www.softfeng.cn |
-| 授权与合作 | support@softfeng.cn |
+| 授权与合作 | xunuowl@qq.com |
 
 本仓库中的服务端可执行程序、管理后台静态资源、数据库初始化脚本、部署脚本与文档，
 其著作权及相关知识产权均归陇南市软风科技有限公司所有，受《中华人民共和国著作权法》
@@ -58,4 +57,4 @@
 | Redis | BSD-3-Clause |
 | FFmpeg | LGPL-2.1 / GPL-2.0（按发行版编译选项，独立可执行文件调用） |
 
-如对上述清单有异议，请联系 support@softfeng.cn，我们将在核实后更新。
+如对上述清单有异议，请联系 xunuowl@qq.com，我们将在核实后更新。

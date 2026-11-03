@@ -228,7 +228,6 @@ tar xzf peiwan-data-2026-11-03.tar.gz
 ## 八、支持
 
 - 文档：`deploy/README.md`（部署细节与排错）
-- 技术支持与授权：support@softfeng.cn
-- 官方网站：https://www.softfeng.cn
+- 技术支持与授权：xunuowl@qq.com
 
 © 2026 陇南市软风科技有限公司 版权所有。「软风」「SoftFeng」为本公司商标。
