@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 软风游戏陪玩系统 · 单文件初始化 SQL（自动生成，请勿手工编辑）
 --
--- 生成时间：2026-11-04 17:52:16
+-- 生成时间：2026-11-04 17:57:02
 -- 数据来源：migrations/（共 144 个迁移，按文件名顺序）
 -- 目标库名：peiwan_db
 --
@@ -269,14 +269,12 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 --
 -- 全部使用 INSERT IGNORE + 固定主键，保证迁移可重复执行且不覆盖已调整的数据。
 -- 内置角色：R_SUPER 超级管理员（is_system=1，拥有全部权限）、
---           R_ADMIN 管理员（is_system=1，拥有全部权限点）、
---           R_OPERATOR 运营（只读用户资料 + 查看系统配置）。
+--           R_ADMIN 管理员（is_system=1，拥有全部权限点）。
 -- ============================================================================
 
 INSERT IGNORE INTO roles (id, name, code, description, status, is_system, sort) VALUES
   (1, '超级管理员', 'R_SUPER', '内置角色，拥有全部权限，不可删除', 1, 1, 1),
-  (2, '管理员', 'R_ADMIN', '内置角色，拥有全部业务权限，不可删除', 1, 1, 2),
-  (3, '运营专员', 'R_OPERATOR', '可查看与维护用户资料，不可管理角色与配置', 1, 0, 3);
+  (2, '管理员', 'R_ADMIN', '内置角色，拥有全部业务权限，不可删除', 1, 1, 2);
 
 INSERT IGNORE INTO permissions (id, parent_id, name, code, type, path, icon, sort, status) VALUES
   (1,  0,  '仪表盘',   'dashboard',            1, '/dashboard',     'ri:dashboard-line',        10, 1),
@@ -299,10 +297,6 @@ INSERT IGNORE INTO permissions (id, parent_id, name, code, type, path, icon, sor
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions;
 
--- 运营专员：仅用户查看/编辑、封禁解封与配置查看
-INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-  (3, 1), (3, 10), (3, 11), (3, 12), (3, 13), (3, 40), (3, 41);
-
 -- 存量超级管理员补齐角色关联（role_id 为 0 时按 is_super 落到 R_SUPER）
 UPDATE admins SET role_id = 1 WHERE is_super = 1 AND role_id = 0;
 
@@ -314,7 +308,7 @@ UPDATE admins SET role_id = 1 WHERE is_super = 1 AND role_id = 0;
 -- 软风游戏陪玩系统 · 管理员管理权限点
 --
 -- 菜单节点 50 + 5 个按钮权限点，分配给内置超级管理员与管理员角色。
--- 运营专员（R_OPERATOR）不授予管理员管理权限。
+-- 仅授予内置超级管理员与管理员角色。
 -- ============================================================================
 
 INSERT IGNORE INTO permissions (id, parent_id, name, code, type, path, icon, sort, status) VALUES
@@ -370,7 +364,7 @@ CREATE TABLE IF NOT EXISTS uploads (
 -- 软风游戏陪玩系统 · 文件素材权限点
 --
 -- 菜单节点 60 + 3 个按钮权限点（查看/上传/删除）。
--- 超级管理员、管理员全部授予；运营专员只读。
+-- 超级管理员、管理员全部授予。
 -- ============================================================================
 
 INSERT IGNORE INTO permissions (id, parent_id, name, code, type, path, icon, sort, status) VALUES
@@ -385,8 +379,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions WHERE id IN (60, 61, 62, 63);
 
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions WHERE id IN (60, 61);
 
 
 -- ----------------------------------------------------------------------------
@@ -449,7 +441,7 @@ CREATE TABLE IF NOT EXISTS game_servers (
 -- 软风游戏陪玩系统 · 游戏与区服权限点
 --
 -- 菜单节点 64 + 游戏增删改查（65-68）+ 区服查看/维护（69-70）。
--- 超级管理员、管理员全部授予；运营专员只读。
+-- 超级管理员、管理员全部授予。
 -- ============================================================================
 
 INSERT IGNORE INTO permissions (id, parent_id, name, code, type, path, icon, sort, status) VALUES
@@ -467,8 +459,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions WHERE id IN (64, 65, 66, 67, 68, 69, 70);
 
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions WHERE id IN (64, 65, 69);
 
 
 -- ----------------------------------------------------------------------------
@@ -532,8 +522,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions WHERE id IN (71, 72, 73, 74, 75);
 
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions WHERE id IN (71, 72);
 
 
 -- ----------------------------------------------------------------------------
@@ -761,7 +749,7 @@ CREATE TABLE IF NOT EXISTS companion_applies (
 -- 软风游戏陪玩系统 · 实名认证与陪玩审核权限点
 --
 -- 菜单节点 peiwan:companion + 实名审核、入驻审核按钮权限。
--- 超级管理员、管理员全部授予；运营专员只读列表。
+-- 超级管理员、管理员全部授予。
 --
 -- 注意：不要写死主键 ID（分类管理已占用 71-75，会造成 INSERT IGNORE 静默跳过），
 --       一律按 code 幂等插入，角色绑定按 code 反查。
@@ -804,9 +792,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions
 WHERE code IN ('peiwan:companion', 'identity:list', 'identity:audit', 'companion:list', 'companion:audit');
 
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions
-WHERE code IN ('peiwan:companion', 'identity:list', 'companion:list');
 
 
 -- ----------------------------------------------------------------------------
@@ -860,10 +845,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions
 WHERE code IN ('peiwan:companion', 'identity:list', 'identity:audit', 'companion:list', 'companion:audit');
 
--- 运营专员：只读列表
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions
-WHERE code IN ('peiwan:companion', 'identity:list', 'companion:list');
 
 
 -- ----------------------------------------------------------------------------
@@ -977,10 +958,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions
 WHERE code IN ('review:list', 'review:create', 'review:audit');
 
--- 运营专员：只读
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions
-WHERE code = 'review:list';
 
 
 -- ----------------------------------------------------------------------------
@@ -1115,9 +1092,6 @@ SELECT 1, id FROM permissions WHERE code IN ('companion:voice:list', 'companion:
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions WHERE code IN ('companion:voice:list', 'companion:voice:audit');
 
--- 运营专员：只读列表
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions WHERE code = 'companion:voice:list';
 
 
 -- ----------------------------------------------------------------------------
@@ -1158,7 +1132,7 @@ ON DUPLICATE KEY UPDATE config_key = config_key;
 -- 软风游戏陪玩系统 · 后台手动新增用户权限点
 --
 -- 在「用户管理」菜单下增加「新增用户」按钮权限（id=15），
--- 授予超级管理员（R_SUPER）与管理员（R_ADMIN）；运营专员不授予。
+-- 授予超级管理员（R_SUPER）与管理员（R_ADMIN）。
 -- ============================================================================
 
 INSERT IGNORE INTO permissions (id, parent_id, name, code, type, path, icon, sort, status) VALUES
@@ -1383,7 +1357,7 @@ CREATE TABLE IF NOT EXISTS wallet_ledgers (
 -- 软风游戏陪玩系统 · 订单与钱包权限点
 --
 -- 菜单节点 peiwan:order + 订单操作按钮；peiwan:wallet + 钱包调账按钮。
--- 超级管理员、管理员全部授予；运营专员只读。
+-- 超级管理员、管理员全部授予。
 -- 一律按 code 幂等插入，不写死主键 ID。
 -- ============================================================================
 
@@ -1450,10 +1424,6 @@ SELECT 2, id FROM permissions
 WHERE code IN ('peiwan:order', 'order:list', 'order:complete', 'order:cancel', 'order:remark',
                'peiwan:wallet', 'wallet:list', 'wallet:adjust', 'wallet:ledger');
 
--- 运营专员：只读
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions
-WHERE code IN ('peiwan:order', 'order:list', 'peiwan:wallet', 'wallet:list', 'wallet:ledger');
 
 
 -- ----------------------------------------------------------------------------
@@ -1581,7 +1551,7 @@ WHERE p.code = 'peiwan:member-level'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('peiwan:member-level', 'member-level:list', 'member-level:create', 'member-level:update', 'member-level:delete')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -1771,7 +1741,7 @@ WHERE p.code = 'peiwan:companion-level'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('peiwan:companion-level', 'companion-level:list', 'companion-level:create', 'companion-level:update', 'companion-level:delete')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -2122,7 +2092,7 @@ WHERE p.code = 'peiwan:notice'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('peiwan:notice', 'notice:list', 'notice:create', 'notice:update', 'notice:delete')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -2176,7 +2146,7 @@ WHERE p.code = 'peiwan:inbox'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('peiwan:inbox', 'inbox:list', 'inbox:create', 'inbox:delete')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -2499,7 +2469,7 @@ WHERE p.code = 'peiwan:group'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('peiwan:group', 'group:list', 'group:create', 'group:update', 'group:delete', 'group:member')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -2669,7 +2639,7 @@ WHERE p.code = 'peiwan:circle'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('peiwan:circle', 'post:list', 'post:audit', 'post:update', 'post:delete')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 -- ============================================================================
@@ -2931,10 +2901,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions
 WHERE code IN ('peiwan:withdraw', 'withdraw:list', 'withdraw:audit');
 
--- 运营专员：只读
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions
-WHERE code IN ('peiwan:withdraw', 'withdraw:list');
 
 
 -- ----------------------------------------------------------------------------
@@ -2965,10 +2931,6 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions
 WHERE code IN ('online:list', 'chat:view');
 
--- 运营专员：仅在线状态（聊天记录属隐私敏感，不下发）
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions
-WHERE code IN ('online:list');
 
 
 -- ----------------------------------------------------------------------------
@@ -3152,10 +3114,6 @@ SELECT 1, id FROM permissions WHERE code IN ('recharge:list', 'recharge:audit');
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions WHERE code IN ('recharge:list', 'recharge:audit');
 
--- 运营专员：只读
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions WHERE code IN ('recharge:list');
-
 -- 完成后退款权限点（高风险资金操作：冲正陪玩/协同收入、可能负余额），挂在订单管理菜单下。
 INSERT INTO permissions (parent_id, name, code, type, path, icon, sort, status)
 SELECT p.id, '完成后退款', 'order:refund-completed', 2, '', '', 5, 1
@@ -3163,7 +3121,7 @@ FROM permissions p
 WHERE p.code = 'peiwan:order'
   AND NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'order:refund-completed');
 
--- 仅超级管理员 / 管理员授予，运营专员不授予。
+-- 仅超级管理员 / 管理员授予。
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 1, id FROM permissions WHERE code = 'order:refund-completed';
 
@@ -3351,7 +3309,7 @@ WHERE p.code = 'banner'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('banner', 'banner:list', 'banner:create', 'banner:update', 'banner:delete')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -3411,7 +3369,7 @@ WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'sms:log');
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code = 'sms:log'
-WHERE r.code IN ('R_SUPER', 'R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_SUPER', 'R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -3757,7 +3715,7 @@ WHERE p.code = 'payment'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('payment', 'payment:list', 'payment:create', 'payment:update', 'payment:delete')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -3933,7 +3891,7 @@ SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN (
   'decoration', 'decoration:list', 'decoration:create', 'decoration:update', 'decoration:delete', 'decoration:grant'
 )
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -4155,7 +4113,7 @@ SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN (
   'gift', 'gift:list', 'gift:create', 'gift:update', 'gift:delete', 'gift:record'
 )
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -4163,20 +4121,11 @@ WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
 -- 0110_grant_operator_upload_permission.sql
 -- ----------------------------------------------------------------------------
 -- ============================================================================
--- 运营角色补「素材上传」权限
---   背景：运营已被授予商品 / 礼物 / 装扮等新增编辑权限，这些页面都用
---   ArtMediaUpload 直传 /api/v1/admin/uploads，但 R_OPERATOR 只有
---   system:file:list 而没有 system:file:upload，导致点上传直接 403。
---   这里只补 upload，不放开删除，保持素材删除仍由管理员执行。
+-- 运营角色补「素材上传」权限（已废弃）
+--
+-- 内置角色只保留超级管理员与管理员，该角色已从初始化数据中移除，
+-- 本条迁移不再需要执行。文件名保留以维持 schema_migrations 记账连续。
 -- ============================================================================
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r
-JOIN permissions p ON p.code = 'system:file:upload'
-WHERE r.code = 'R_OPERATOR'
-  AND NOT EXISTS (
-    SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
 
 
 -- ----------------------------------------------------------------------------
@@ -4326,7 +4275,7 @@ SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN (
   'coupon', 'coupon:list', 'coupon:create', 'coupon:update', 'coupon:delete', 'coupon:grant'
 )
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -4402,7 +4351,7 @@ WHERE p.code = 'deposit'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN ('deposit', 'deposit:list', 'deposit:refund', 'deposit:fine')
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -4502,7 +4451,7 @@ SELECT r.id, p.id FROM roles r
 JOIN permissions p ON p.code IN (
   'penalty', 'penalty:list', 'penalty:create', 'penalty:revoke', 'deposit:audit'
 )
-WHERE r.code IN ('R_ADMIN', 'R_OPERATOR')
+WHERE r.code IN ('R_ADMIN')
   AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 
@@ -5041,9 +4990,6 @@ SELECT 2, id FROM permissions
 WHERE code IN ('support', 'support:list', 'support:reply', 'support:transfer', 'support:manage');
 
 -- 运营：接入与回复，不含坐席管理
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions
-WHERE code IN ('support', 'support:list', 'support:reply', 'support:transfer');
 
 
 -- ----------------------------------------------------------------------------
@@ -5113,8 +5059,6 @@ WHERE p.code = 'system:config'
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions WHERE code IN ('license:view', 'license:manage');
 
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions WHERE code = 'license:view';
 
 
 -- ----------------------------------------------------------------------------
