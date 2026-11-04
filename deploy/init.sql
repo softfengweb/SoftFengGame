@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 软风游戏陪玩系统 · 单文件初始化 SQL（自动生成，请勿手工编辑）
 --
--- 生成时间：2026-11-03 20:26:17
+-- 生成时间：2026-11-04 17:52:16
 -- 数据来源：migrations/（共 144 个迁移，按文件名顺序）
 -- 目标库名：peiwan_db
 --
@@ -198,13 +198,9 @@ CREATE TABLE IF NOT EXISTS users (
 -- ============================================================================
 -- 软风游戏陪玩系统 · 初始用户
 --
--- 手机号 18294707491，密码 258936ck（bcrypt cost=10）。
--- 手机号唯一索引兜底，重复执行不会产生脏数据。
+-- 发版不预置任何用户账号：小程序用户由微信授权登录自动创建。
+-- 文件名保留（schema_migrations 需与实际迁移一一对应），内容为空操作。
 -- ============================================================================
-
-INSERT INTO users (phone, password_hash, nickname, avatar, gender, user_type, status)
-SELECT '18294707491', '$2a$10$E7k5.H22rET7KhHSNN40qeRnJKJ6Xy31V3AwIC3DiS7om/4DTuFvO', '', '', 0, 1, 1
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE phone = '18294707491');
 
 
 -- ----------------------------------------------------------------------------
@@ -439,48 +435,11 @@ CREATE TABLE IF NOT EXISTS game_servers (
 -- ============================================================================
 -- 软风游戏陪玩系统 · 游戏与区服初始数据
 --
--- 与小程序首页的游戏分类保持一致，后台可直接编辑、新增或停用。
+-- 发版不预置任何游戏与区服：客户的经营品类各不相同，预置数据反而要先删一遍。
+-- 装好后在后台「交易管理 / 游戏管理」里按需添加游戏再配区服即可。
+--
+-- 文件名保留（schema_migrations 需与实际迁移一一对应），内容为空操作。
 -- ============================================================================
-
-INSERT IGNORE INTO games (name, short_name, icon, icon_bg, sort, status, remark) VALUES
-  ('王者荣耀',  '王', '', 'linear-gradient(135deg, #f7a63b 0%, #f76b1c 100%)', 10, 1, ''),
-  ('英雄联盟',  '英', '', 'linear-gradient(135deg, #22c7e5 0%, #0a8fbf 100%)', 20, 1, ''),
-  ('和平精英',  '和', '', 'linear-gradient(135deg, #4cd964 0%, #2fa84f 100%)', 30, 1, ''),
-  ('原神',      '原', '', 'linear-gradient(135deg, #8b7bf0 0%, #4a3fd1 100%)', 40, 1, ''),
-  ('无畏契约',  '无', '', 'linear-gradient(135deg, #ff5f6b 0%, #c42c3a 100%)', 50, 1, '');
-
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '微信区', 10, 1 FROM games WHERE name = '王者荣耀';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, 'QQ区', 20, 1 FROM games WHERE name = '王者荣耀';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '苹果微信区', 30, 1 FROM games WHERE name = '王者荣耀';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '苹果QQ区', 40, 1 FROM games WHERE name = '王者荣耀';
-
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '艾欧尼亚', 10, 1 FROM games WHERE name = '英雄联盟';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '黑色玫瑰', 20, 1 FROM games WHERE name = '英雄联盟';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '祖安', 30, 1 FROM games WHERE name = '英雄联盟';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '诺克萨斯', 40, 1 FROM games WHERE name = '英雄联盟';
-
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, 'QQ区', 10, 1 FROM games WHERE name = '和平精英';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '微信区', 20, 1 FROM games WHERE name = '和平精英';
-
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '官服', 10, 1 FROM games WHERE name = '原神';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, 'B服', 20, 1 FROM games WHERE name = '原神';
-
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '国服', 10, 1 FROM games WHERE name = '无畏契约';
-INSERT IGNORE INTO game_servers (game_id, name, sort, status)
-SELECT id, '亚服', 20, 1 FROM games WHERE name = '无畏契约';
 
 
 -- ----------------------------------------------------------------------------
@@ -546,22 +505,9 @@ CREATE TABLE IF NOT EXISTS categories (
 -- ============================================================================
 -- 软风游戏陪玩系统 · 商品分类种子数据
 --
--- 按游戏 1~5 预置常用分类，王者荣耀带二级示例（上分陪练 / 娱乐陪玩）。
--- 使用 INSERT IGNORE，重复执行不会覆盖后台已改数据。
+-- 发版不预置分类：分类层级与名称和游戏、经营方式强相关，由客户在后台自行建立。
+-- 文件名保留（schema_migrations 需与实际迁移一一对应），内容为空操作。
 -- ============================================================================
-
-INSERT IGNORE INTO categories (id, game_id, parent_id, name, icon, sort, status, remark) VALUES
-  (1,  1, 0, '绝密专区', '', 100, 1, ''),
-  (2,  1, 0, '陪玩专区', '', 90,  1, ''),
-  (3,  1, 0, '体验专区', '', 80,  1, ''),
-  (4,  1, 0, '清图专区', '', 70,  1, ''),
-  (5,  1, 1, '上分陪练', '', 100, 1, ''),
-  (6,  1, 1, '娱乐陪玩', '', 90,  1, ''),
-  (7,  2, 0, '上分陪练', '', 100, 1, ''),
-  (8,  2, 7, '定级赛',   '', 100, 1, ''),
-  (9,  3, 0, '排位陪练', '', 100, 1, ''),
-  (10, 4, 0, '委托代肝', '', 100, 1, ''),
-  (11, 5, 0, '上分陪练', '', 100, 1, '');
 
 
 -- ----------------------------------------------------------------------------
@@ -643,36 +589,12 @@ CREATE TABLE IF NOT EXISTS goods_skus (
 -- ----------------------------------------------------------------------------
 -- 0019_seed_goods.sql
 -- ----------------------------------------------------------------------------
--- 商品初始数据（幂等，重复执行不会重复写入）
--- 说明：3 号商品为多规格示例（has_sku=1，价格走 goods_skus）
-
-INSERT IGNORE INTO goods
-  (id, category_id, game_id, title, cover, images, description, unit, has_sku,
-   price, market_price, companion_income, stock, sold, limit_per_user, status, sort, remark)
-VALUES
-  (1, 1, 1, '绝密护航 · 保底 1000 万', '', '[]', '绝密地图护航，保底带出 1000 万物资，中途掉线免费补一局。', '局', 0,
-   9900, 15800, 7722, -1, 0, 0, 1, 100, ''),
-  (2, 4, 1, '绝密清图 · 10 分钟速通', '', '[]', '10 分钟内完成清图，不清图不加价。', '局', 0,
-   22800, 28800, 17784, -1, 0, 0, 1, 90, ''),
-  (3, 3, 1, '体验专区 · 娱乐陪玩', '', '[]', '轻松开黑，支持语音连麦，多档时长可选。', '小时', 1,
-   5200, 8800, 3000, -1, 0, 0, 1, 80, '多规格示例：价格以规格为准'),
-  (4, 2, 1, '陪玩专区 · 语音连麦 1 小时', '', '[]', '全程语音，按局内时间计算，可指定位置。', '小时', 0,
-   5200, 8800, 3000, -1, 0, 0, 1, 70, ''),
-  (5, 7, 2, '英雄联盟 · 排位上分陪练', '', '[]', '双排上分，位置可指定，全程语音沟通。', '星', 0,
-   3900, 5900, 3000, -1, 0, 0, 1, 60, ''),
-  (6, 9, 3, '和平精英 · 排位陪练', '', '[]', '四排冲分，落地成盒包补，支持指定地图。', '局', 0,
-   4500, 6800, 3400, -1, 0, 0, 1, 50, ''),
-  (7, 10, 4, '原神 · 委托代肝', '', '[]', '日常委托 + 体力清空，进度截图交付。', '单', 0,
-   6800, 9800, 5200, -1, 0, 0, 1, 40, ''),
-  (8, 11, 5, '无畏契约 · 上分陪练', '', '[]', '竞技模式上分，按局计费，可指定角色定位。', '局', 0,
-   5600, 8800, 4300, -1, 0, 0, 1, 30, '');
-
-INSERT IGNORE INTO goods_skus
-  (goods_id, name, price, market_price, companion_income, stock, sort, status)
-VALUES
-  (3, '1 小时', 5200, 8800, 3000, -1, 10, 1),
-  (3, '2 小时', 9800, 15800, 5600, -1, 20, 1),
-  (3, '3 小时', 13800, 21800, 7900, -1, 30, 1);
+-- ============================================================================
+-- 软风游戏陪玩系统 · 商品初始数据
+--
+-- 发版不预置商品与规格：价格、分佣、服务内容全是客户自己的经营数据。
+-- 文件名保留（schema_migrations 需与实际迁移一一对应），内容为空操作。
+-- ============================================================================
 
 
 -- ----------------------------------------------------------------------------
