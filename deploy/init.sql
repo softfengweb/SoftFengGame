@@ -1,8 +1,8 @@
 -- ============================================================================
 -- 软风游戏陪玩系统 · 单文件初始化 SQL（自动生成，请勿手工编辑）
 --
--- 生成时间：2026-11-04 17:57:02
--- 数据来源：migrations/（共 144 个迁移，按文件名顺序）
+-- 生成时间：2026-11-07 22:17:21
+-- 数据来源：migrations/（共 145 个迁移，按文件名顺序）
 -- 目标库名：peiwan_db
 --
 -- 导入方式：
@@ -5363,6 +5363,36 @@ WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'site.pull_ref
 
 
 -- ----------------------------------------------------------------------------
+-- 0141_add_zk_license_revoke.sql
+-- ----------------------------------------------------------------------------
+-- ============================================================================
+-- 授权吊销真正生效：本机记录「何时得知吊销」，并按可配置宽限期判定。
+--
+-- 背景：中控吊销授权码后，旧实现只改中控侧的状态；客户实例拿到的签名体里
+-- 依然写着未到期，本地验签永远返回 valid，于是「吊销了还能用」。
+-- 现在中控心跳会返回 10410（授权已被吊销），客户端据此把下面两列写入，
+-- 之后本地判定优先看吊销状态，宽限期结束即按无效处理。
+--
+-- 宽限期放在系统配置里（后台「系统配置 → 授权设置」）：
+--   3（默认）= 吊销后还能用 3 天，给客户续费时间；
+--   0        = 收到吊销通知立即失效，用于验证吊销链路。
+-- ============================================================================
+
+ALTER TABLE `zk_license`
+  ADD COLUMN `revoked_at`    DATETIME     NULL DEFAULT NULL COMMENT '首次得知吊销的时间（宽限期起点）' AFTER `activated_at`,
+  ADD COLUMN `revoke_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '中控返回的吊销原因' AFTER `revoked_at`;
+
+INSERT INTO `system_configs`
+  (`group_name`, `config_key`, `config_value`, `value_type`, `is_public`, `is_system`, `sort`, `remark`)
+SELECT 'license', 'license.revoke_grace_days', '3', 'int', 0, 0, 10,
+       '吊销宽限期（天）：与中控的「到期宽限期」无关，0 表示收到吊销通知即失效'
+FROM DUAL
+WHERE NOT EXISTS (
+  SELECT 1 FROM `system_configs` WHERE `config_key` = 'license.revoke_grace_days'
+);
+
+
+-- ----------------------------------------------------------------------------
 -- 迁移记账：让 -migrate 认为这些版本已执行过
 -- ----------------------------------------------------------------------------
 INSERT INTO schema_migrations (version) VALUES
@@ -5509,7 +5539,8 @@ INSERT INTO schema_migrations (version) VALUES
   ('0137_add_site_h5_url_config.sql'),
   ('0138_add_admin_token_version.sql'),
   ('0139_drop_zk_license_modules_limits.sql'),
-  ('0140_add_pull_refresh_brand_config.sql')
+  ('0140_add_pull_refresh_brand_config.sql'),
+  ('0141_add_zk_license_revoke.sql')
 ON DUPLICATE KEY UPDATE version = VALUES(version);
 
--- 单文件初始化 SQL 结束（144 个迁移）
+-- 单文件初始化 SQL 结束（145 个迁移）
